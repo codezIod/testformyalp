@@ -1,0 +1,125 @@
+<html xmlns="http://www.w3.org/1999/xhtml" lang="en">
+ <head> 
+  <meta charset="utf-8"> 
+  <title>XNotepad</title> 
+  <link rel="icon" type="image/x-icon" href="data:image/x-icon;base64,R0lGODlhEAAQAKEAAAAAAICAgP///wAAACH/     C05FVFNDQVBFMi4wAwEAAAAh/hFDcmVhdGVkIHdpdGggR0lNUAAh+QQBZAADACwAAAAAEAAQAAACJIyPacLtvp5kEUwYmL00i81VXK     eNgjiioQdeqsuakXl6tIIjBQAh+QQBZAADACwAAAAAEAAQAAACIIyPacLtvp5kcb5qG85iZ2+BkyiRV8BBaEqtrKkqslEAADs="> 
+  <style>
+    html, body {
+      height:100%; box-sizing:border-box; margin:0;
+    }
+    textarea {
+      height:calc(100% - 2rem); box-sizing:border-box;
+      border:none; outline:none; resize:none;
+      font-family: monospace;
+    }
+    #textbox {
+      background-color:transparent;
+      width:100%;
+      padding:0.5em;
+      padding-right:calc(100% - 80ch - 0.5em - 17px);
+      overflow-y:scroll;
+    }
+    #linewidth-guide {
+      border-right:1px solid PaleTurquoise;
+      width:calc(80ch + 1px);
+      margin-left:0.5em;
+      position:absolute;
+      z-index:-1;
+    }
+    nav {
+      position:fixed; bottom:0; left:0;
+      box-sizing:border-box; width:100%; height:2rem; padding:0 0.5em;
+      background-color:#eee; border-top:1px solid silver;
+      line-height:2rem; color:gray; font-family:sans-serif; font-size:85%;
+    }
+    #controls {
+      float:right;
+    }
+    #save a {
+      text-decoration:none;
+    }
+    #about, #open &gt; input {
+      display:none;
+    }
+    svg {
+      vertical-align:middle;
+    }
+    @media print { nav { display:none; } }
+  </style> 
+ </head> 
+ <body> 
+  <textarea id="linewidth-guide"></textarea> 
+  <textarea id="textbox" autofocus placeholder="Type..." spellcheck="false"></textarea> 
+  <nav> 
+   <span id="stats"> <span id="char-count">0</span> Chars │ <span id="word-count">0</span> Words │ <span id="line-count">0</span> Lines </span> 
+    │ <span id="open"> <input type="file" value="open"> <a href="#"></a> </span> 
+     
+  </nav> 
+  <div id="about"> 
+   <h2></h2> 
+   <p></p> 
+   <p></p> 
+   <p>(<a </a>)</p> 
+  </div> 
+  <script>
+    var textbox = document.querySelector('#textbox');
+    var timeoutID = null;
+    var filenameBox = document.querySelector('#filename');
+
+    // load/save cache in local storage
+    textbox.value = localStorage.getItem('xnotepad') || '';
+    textbox.setSelectionRange(textbox.value.length, textbox.value.length); // place caret at end of content
+    calcStats(); // update counters after loading
+    function storeLocally() { localStorage.setItem('xnotepad', textbox.value); }
+    window.beforeunload = storeLocally;
+
+    // tab key support
+    textbox.onkeypress = function (event) {
+      if (event.keyCode === 9) {
+        event.preventDefault();
+        var text = this.value, s = this.selectionStart, e = this.selectionEnd;
+        this.value = text.substring(0, s) + '\t' + text.substring(e);
+        this.selectionStart = this.selectionEnd = s + 1;
+      }
+    };
+
+    textbox.onkeyup = function () {
+      calcStats();
+      window.clearTimeout(timeoutID); // prevent saving too frequently
+      timeoutID = window.setTimeout(storeLocally, 1000);
+    };
+
+    // counters
+    function calcStats() {
+      updateCount('char', textbox.value.length);
+      updateCount('word', textbox.value === "" ? 0 : textbox.value.replace(/\s+/g, ' ').split(' ').length);
+      updateCount('line', textbox.value === "" ? 0 : textbox.value.split(/\n/).length);
+    }
+    function updateCount(item, value) {
+      document.querySelector('#' + item + '-count').textContent = value;
+    }
+
+    
+
+    // open file
+    document.querySelector('#open a').onclick = function () {
+      document.querySelector('#open input').click();
+    };
+    document.querySelector('#open input').onchange = function () {
+      var reader = new FileReader();
+      reader.file = this.files[0]; // custom property so the filenameBox can be set from within reader.onload()
+      reader.onload = function () {
+        filenameBox.value = this.file.name;
+        textbox.value = this.result; // this = FileReader
+      };
+      reader.readAsText(this.files[0]); // this = input
+    };
+
+    // toggle spell-checking
+    document.querySelector('#spellcheck').onchange = function () {
+      textbox.spellcheck = this.checked;
+    };
+    textbox.spellcheck = document.querySelector('#spellcheck').checked; // initialize
+  </script>  
+ </body>
+</html>
